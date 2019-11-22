@@ -1,0 +1,13 @@
+{
+	"folders": [
+		{
+			"path": "database"
+		},
+		{
+			"path": "sensor"
+		},
+		{
+			"path": "website"
+		}
+	]
+}
