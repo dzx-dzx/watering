@@ -14,7 +14,7 @@ var usersRouter = require('./routes/users');
 var app = express();
 var mongodb = require('mongodb')
 ///////////////////////////////
-const server = require('http').Server(express());
+const sensorServer = require('http').Server(express());
 fs.rmdir("../database", () => { });
 fs.mkdir("../database", () => { });
 var spawn = require('child_process').spawn,
@@ -22,8 +22,9 @@ var spawn = require('child_process').spawn,
   databaseProcess = spawn('mongod', ['--dbpath', '../database/']);
 var db, client = new mongodb.MongoClient('mongodb://localhost:27017')
 client.connect(() => {
-  console.log("Connected successfully to server");
+  console.log("Connected successfully to Database");
   db = client.db('sensorData');
+  // db.collection('documents').drop()
 });
 
 sensorProcess.stdout.on('data', function (data) {
@@ -33,23 +34,22 @@ sensorProcess.stdout.on('data', function (data) {
 //   console.log('From Database:', data.toString());
 // });
 
-const io = require('socket.io')(server);
-io.on('connection', (socket) => {
-  var temperature, humidity;
+const sensorServerio = require('socket.io')(sensorServer);
+sensorServerio.on('connection', (socket) => {
 
-  console.log('Server:a user connected');
+  console.log('sensorServer:a user connected');
 
   socket.on("disconnect", () => {
-    console.log("Server:a user go out");
+    console.log("sensorServer:a user go out");
   });
 
   function request_data() {
     var temperature, humidity;
     async.series([
+
       (callback) => {
-        console.log("Now is the time:",Date.now())
         socket.emit('request_temperature');
-        socket.emit('request_humidity');
+
         socket.once("response_temperature", (data) => {
           temperature = data;
           console.log("From Sensor:Temperature:", temperature);
@@ -57,6 +57,7 @@ io.on('connection', (socket) => {
         })
       },
       (callback) => {
+        socket.emit('request_humidity');
         socket.once("response_humidity", (data) => {
           humidity = data;
           console.log("From Sensor:Humidity:", humidity);
@@ -65,21 +66,22 @@ io.on('connection', (socket) => {
 
       },
       (callback) => {
-        console.log(`Now Storing Data ...`);
+
         if (db != undefined) {
+          console.log(`Now Storing Data ...`);
           const collection = db.collection('documents');
-          // Insert some documents
+          var time = Date.now()
+          console.log("Now is the time:", time)
           collection.insertMany([
-            { temperature: temperature }, { humidity: humidity }
+            { type: "temperature", data: temperature, time: time }, { type: "humidity", data: humidity, time: time }
           ], function (err, result) {
-            console.log(err)
             console.log("Data Successfully Stored.");
           })
         }
         callback(null, null)
       },
       (callback) => {
-        setTimeout(request_data, 5000);
+        setTimeout(request_data, 1000);
         callback(null, null);
       },
 
@@ -90,9 +92,48 @@ io.on('connection', (socket) => {
 
 });
 
-server.listen(3001);
+sensorServer.listen(3001);
 ///////////////////////////////
 
+/////////////////////////////////
+const indexServer = require('http').Server(express());
+const indexServerio = require('socket.io')(indexServer);
+indexServerio.on('connection', (socket) => {
+  console.log('indexServer:a user connected');
+
+  socket.on("disconnect", () => {
+    console.log("indexServer:a user go out");
+  });
+  socket.on("request_humidity", () => {
+    if (db != undefined) {
+      const collection = db.collection('documents');
+      collection.findOne(
+        { type: "humidity" },
+        { sort: [['time', -1]] },
+        (e, res) => {
+          socket.emit("response_humidity", res);
+          console.log("Humidity read from Database:", res)
+        })
+    }
+
+  });
+  socket.on("request_temperature", () => {
+    if (db != undefined) {
+      const collection = db.collection('documents');
+      collection.findOne(
+        { type: "temperature" },
+        { sort: [['time', -1]] },
+        (e, res) => {
+          socket.emit("response_temperature", res);
+          console.log("temperature read from Database:", res)
+        })
+    }
+  });
+
+})
+
+indexServer.listen(3002)
+/////////////////////////////////
 // view engine setup
 app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'ejs');
