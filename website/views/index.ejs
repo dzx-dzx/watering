@@ -10,100 +10,11 @@
   <h1><%= title %></h1>
   <p>Welcome to <%= title %></p>
   <h2>Temperature:</h2>
-  <svg width="500" height="500"></svg>
+  <svg width="5000" height="5000"></svg>
 </body>
 <script src="https://d3js.org/d3.v5.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.3.0/socket.io.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/async/3.1.0/async.min.js"></script>
-<script>
-  const sensorClientio = io('http://localhost:3002');
-
-  var temperatureData = [];
-
-  var margin = { top: 10, right: 30, bottom: 30, left: 50 },
-    width = 460 - margin.left - margin.right,
-    height = 400 - margin.top - margin.bottom;
-
-  var svg = d3.select("svg")
-    .append("svg")
-    .attr("width", width + margin.left + margin.right)
-    .attr("height", height + margin.top + margin.bottom)
-    .append("g")
-    .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
-
-  var x = d3.scaleLinear().range([0, width]);
-  var xAxis = d3.axisBottom().scale(x);
-  svg.append("g")
-    .attr("transform", "translate(0," + height + ")")
-    .attr("class", "Xaxis")
-
-  var y = d3.scaleLinear().range([height, 0]);
-  var yAxis = d3.axisLeft().scale(y);
-  svg.append("g")
-    .attr("class", "Yaxis")
-
-
-  var temperature, humidity;
-  function updateData() {
-    async.series([
-      (callback) => {
-        sensorClientio.emit('request_temperature');
-        sensorClientio.once("response_temperature", (data) => {
-          temperature = { data: data["data"], time: data["time"] };
-          console.log("From Website:Temperature:", temperature);
-          callback(null, null)
-        })
-      },
-      (callback) => {
-        sensorClientio.emit('request_humidity');
-        sensorClientio.once("response_humidity", (data) => {
-          humidity = { data: data["data"], time: data["time"] };
-          console.log("From Website:Humidity:", humidity);
-          callback(null, null)
-        })
-
-      },
-      (callback) => {
-
-        temperatureData.push(temperature)
-        if (temperatureData.length >= 10) {
-          temperatureData.shift()
-          x.domain([d3.min(temperatureData, function (d) { return d.time }), d3.max(temperatureData, function (d) { return d.time })]);
-          svg.selectAll(".Xaxis")
-            .call(xAxis);
-
-          y.domain([d3.min(temperatureData, function (d) { return d.data }), d3.max(temperatureData, function (d) { return d.data })]);
-          svg.selectAll(".Yaxis")
-            .call(yAxis);
-          
-          var u = svg.selectAll(".lineTest")
-            .data([temperatureData], function (d) { return d.data });
-
-          u
-            .enter()
-            .append("path")
-            .attr("class", "lineTest")
-            console.log(u)
-            u.merge(u)
-            .attr("d", d3.line()
-              .x(function (d) { return x(d.time); })
-              .y(function (d) { return y(d.data); }))
-            .attr("fill", "none")
-            .attr("stroke", "steelblue")
-            .attr("stroke-width", 2.5)
-        }
-        callback(null, null);
-      },
-      (callback) => {
-        setTimeout(updateData, 2000);
-        callback(null, null);
-      }
-
-    ])
-  }
-  updateData();
-
-
-</script>
+<script src="javascripts/1.js"></script>
 
 </html>

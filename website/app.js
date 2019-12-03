@@ -6,13 +6,14 @@ var logger = require('morgan');
 //////////////////////////
 var async = require('async');
 var fs = require('fs')
+var mongodb = require('mongodb')
 //////////////////////////
 
 var indexRouter = require('./routes/index');
 var usersRouter = require('./routes/users');
 
 var app = express();
-var mongodb = require('mongodb')
+
 ///////////////////////////////
 const sensorServer = require('http').Server(express());
 fs.rmdir("../database", () => { });
@@ -24,7 +25,7 @@ var db, client = new mongodb.MongoClient('mongodb://localhost:27017')
 client.connect(() => {
   console.log("Connected successfully to Database");
   db = client.db('sensorData');
-  // db.collection('documents').drop()
+  db.collection('documents').drop()
 });
 
 sensorProcess.stdout.on('data', function (data) {
@@ -95,45 +96,6 @@ sensorServerio.on('connection', (socket) => {
 sensorServer.listen(3001);
 ///////////////////////////////
 
-/////////////////////////////////
-const indexServer = require('http').Server(express());
-const indexServerio = require('socket.io')(indexServer);
-indexServerio.on('connection', (socket) => {
-  console.log('indexServer:a user connected');
-
-  socket.on("disconnect", () => {
-    console.log("indexServer:a user go out");
-  });
-  socket.on("request_humidity", () => {
-    if (db != undefined) {
-      const collection = db.collection('documents');
-      collection.findOne(
-        { type: "humidity" },
-        { sort: [['time', -1]] },
-        (e, res) => {
-          socket.emit("response_humidity", res);
-          console.log("Humidity read from Database:", res)
-        })
-    }
-
-  });
-  socket.on("request_temperature", () => {
-    if (db != undefined) {
-      const collection = db.collection('documents');
-      collection.findOne(
-        { type: "temperature" },
-        { sort: [['time', -1]] },
-        (e, res) => {
-          socket.emit("response_temperature", res);
-          console.log("temperature read from Database:", res)
-        })
-    }
-  });
-
-})
-
-indexServer.listen(3002)
-/////////////////////////////////
 // view engine setup
 app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'ejs');
