@@ -7,14 +7,17 @@
 </head>
 
 <body>
-  <h1><%= title %></h1>
-  <p>Welcome to <%= title %></p>
-  <h2>Temperature:</h2>
-  <svg width="5000" height="5000"></svg>
+  <h3>Temperature:</h3>
+  <svg width="800" height="300" class="temperature"></svg>
+  <h3>Humidity:</h3>
+  <svg width="800" height="300" class="humidity"></svg>
 </body>
 <script src="https://d3js.org/d3.v5.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.3.0/socket.io.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/async/3.1.0/async.min.js"></script>
 <script src="javascripts/1.js"></script>
-
+<script>
+  show(d3.select(".temperature"),"temperature")
+  show(d3.select(".humidity"),"humidity")
+</script>
 </html>
